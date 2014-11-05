@@ -26,10 +26,10 @@ if not os.path.exists(get_pip_path):
 os.system(get_pip_path)
 
 # Get PIP executable
-
 pydir, pyexe = os.path.split(sys.executable)
 pip_exe_path = os.path.join(pydir, "Scripts", "pip.exe")
 if not os.path.exists(pip_exe_path):
     raise "File not found: %s" % pip_exe_path
 
+# Install requirements.
 os.system("%s install -r requirements.txt" % pip_exe_path)
