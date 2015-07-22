@@ -1,4 +1,4 @@
-from datetime import date
+﻿from datetime import date
 import os, io, urllib2, zipfile, csv, json, math
 
 class DateEncoder(json.JSONEncoder):
@@ -46,7 +46,8 @@ def set_dict_types(d):
         s = d[k]
         d[k] = date(*map(int,  (s[0:4],s[4:-2],s[6:])))
     # Delete the blank entry
-    del d['']
+    if d.has_key(''):
+        del d['']
 
 
 
