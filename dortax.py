@@ -53,7 +53,7 @@ def set_dict_types(d):
         s = d[k]
         d[k] = date(*map(int,  (s[0:4],s[4:-2],s[6:])))
     # Delete the blank entry
-    if d.has_key(' '):
+    if d.has_key(''):
         del d['']
 
 def download_binary_file(url, out_path):
