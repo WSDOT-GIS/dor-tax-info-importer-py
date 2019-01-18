@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import date
 import os
 import math
+from zipfile import ZipFile
 import requests
-import zipfile
 
 
 def get_quarter(the_date=None):
@@ -37,20 +37,28 @@ def get_sales_tax_shapefile_zip_path(the_date=None):
 
 
 def main():
+    """This function is executed when file is run as a script
+    """
     zip_path = get_sales_tax_shapefile_zip_path()
     zip_fn = os.path.split(zip_path)[1]
-    download_file(zip_path, zip_fn)
+    zip_dir = os.path.join(".", os.path.splitext(zip_fn)[0])
+    zip_dir = os.path.abspath(zip_dir)
+    is_new_file = download_file(zip_path, zip_fn)
+    if is_new_file:
+        extract_zip(zip_fn, zip_dir)
 
 
 def download_file(file_url, out_path):
     # type: (str, str)
     """Copies a file from a URL to local path
     """
+    out_path = os.path.abspath(out_path)
     if os.path.exists(out_path):
-        print("%s already exists." % os.path.abspath(out_path))
-        return
+        print("%s already exists." % out_path)
+        return None
 
     with open(out_path, 'wb') as out_file:
+        print("Saving %s to %s..." % (file_url, out_path))
         response = None
         try:
             response = requests.get(file_url, stream=True)
@@ -59,6 +67,23 @@ def download_file(file_url, out_path):
         finally:
             if response:
                 response.close()
+    return out_path
+
+
+def extract_zip(zip_path, out_dir):
+    # type: (str, str)
+    """Extracts a zip file's contents
+    """
+    if not os.path.exists(zip_path):
+        raise FileNotFoundError(zip_path)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    else:
+        raise FileExistsError(out_dir)
+
+    print("Extracting contents from %s into %s..." % (zip_path, out_dir))
+    with ZipFile(zip_path) as zip_file:
+        zip_file.extractall(out_dir)
 
 
 if __name__ == "__main__":
