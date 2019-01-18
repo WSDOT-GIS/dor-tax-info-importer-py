@@ -1,19 +1,17 @@
-﻿from datetime import date
-import os, io, urllib2, zipfile, csv, json, math
+"""Downloads tax rate data from the WA DOR website
+"""
+from __future__ import absolute_import, division, print_function, unicode_literals
+from datetime import date
+import os
+import math
+import requests
+import zipfile
 
-class DateEncoder(json.JSONEncoder):
-    """This class allows datetime.date objects to be serialized as JSON.
-    Dates will be output as ISO strings.
-    """
-    def default(self, o):
-        if type(o) == date:
-            return o.isoformat()
-        else:
-            return json.JSONEncoder.default(self, o)
 
 def get_quarter(the_date=None):
+    # type: (date) -> (int, int)
     """Returns the year and quarter for the given date.
-    If given date is None (default), the current date 
+    If given date is None (default), the current date
     (datetime.date.today()) is assumed.
 
     :Quarters:
@@ -29,57 +27,39 @@ def get_quarter(the_date=None):
     if not the_date:
         the_date = date.today()
     quarter = int(math.ceil(the_date.month / 3))
-    return the_date.year, quarter
+    return the_date.year % 100, quarter
 
-def get_rates_zip_path(the_date=None):
-    """Gets the path to the current rates ZIP file.
+
+def get_sales_tax_shapefile_zip_path(the_date=None):
+    # type: (date) -> str
+    """Gets the URL for ZIPped shapefile for the given date"""
+    return "https://dor.wa.gov/sites/default/files/legacy/downloads/CTbounds/Cities_%02dQ%d.zip" % get_quarter(the_date)
+
+
+def main():
+    zip_path = get_sales_tax_shapefile_zip_path()
+    zip_fn = os.path.split(zip_path)[1]
+    download_file(zip_path, zip_fn)
+
+
+def download_file(file_url, out_path):
+    # type: (str, str)
+    """Copies a file from a URL to local path
     """
-    return "http://dor.wa.gov/downloads/Add_Data/Rates%sQ%s.zip" % get_quarter(the_date)
+    if os.path.exists(out_path):
+        print("%s already exists." % os.path.abspath(out_path))
+        return
 
-def set_dict_types(d):
-    """When CSVs are parsed all fields are interpreted as strings.
-    This function sets the values to the correct types.
-    """
-    for k in ["State", "Local", "RTA", "Rate"]:
-        d[k] = float(d[k])
-    for k in ["Effective Date", "Expiration Date"]:
-        s = d[k]
-        d[k] = date(*map(int,  (s[0:4],s[4:-2],s[6:])))
-    # Delete the blank entry
-    if d.has_key(''):
-        del d['']
-
+    with open(out_path, 'wb') as out_file:
+        response = None
+        try:
+            response = requests.get(file_url, stream=True)
+            for chunk in response.iter_content(chunk_size=128):
+                out_file.write(chunk)
+        finally:
+            if response:
+                response.close()
 
 
-zip_path = get_rates_zip_path()
-
-
-zip_fn = os.path.split(zip_path)[1]
-
-csv_fn = os.path.splitext(zip_fn)[0] + ".csv"
-
-# Download ZIP and extract the CSV file.
-if not os.path.exists(csv_fn):
-    # Download the zip file and save a local version
-    zip = urllib2.urlopen(zip_path)
-    with open(zip_fn, "wb") as f:
-        while 1:
-            packet = zip.read()
-            if not packet:
-                break
-            f.write(packet)
-        f.close()
-
-    with zipfile.ZipFile(zip_fn) as zf:
-        zf.extractall(".")
-
-out_list = {}
-
-with open(csv_fn, 'rb') as csvfile:
-    reader = csv.DictReader(csvfile)
-    for d in reader:
-        set_dict_types(d)
-        out_list[d["Code"]] = d
-
-with open("rates.json", "w") as jsonfile:
-    json.dump(out_list, jsonfile, cls=DateEncoder)
+if __name__ == "__main__":
+    main()

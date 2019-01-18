@@ -1,3 +1,13 @@
+# shapefile files
+*.CPG
+*.dbf
+*.prj
+*.sbn
+*.sbx
+*.shp
+*.shp.xml
+*.shx
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
